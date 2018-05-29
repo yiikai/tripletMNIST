@@ -80,7 +80,7 @@ x_train, x_test, y_train, y_test = cross_validation.train_test_split(x_train, y_
 
 trainsize = len(x_train)
 batch_size = 440
-epochs = 1000
+epochs = 10000
 
 
 train_data = (x_train, y_train)
