@@ -14,6 +14,7 @@ mnist = input_data.read_data_sets("MNIST_data/", one_hot=False)
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
+
 def get_train_set():
     return (mnist.train.images, mnist.train.labels)
 
@@ -28,7 +29,6 @@ x = tf.placeholder(shape=[None, 784], dtype=tf.float32)
 y = tf.placeholder(shape=[None], dtype=tf.int32)
 
 input_x = tf.reshape(x, [-1, 28, 28, 1])
-
 
 with tf.name_scope('Layer1'):
     out = tf.layers.conv2d(inputs=input_x, filters=32, kernel_size=3, strides=2, padding='same',
@@ -52,21 +52,21 @@ with tf.name_scope('Layer2'):
                              bias_initializer=tf.truncated_normal_initializer(stddev=0.01))
 
 print('logits is ', logits.shape)
-loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y,logits=logits)
+loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=logits)
 loss_triplet = batch_hard_triplet_loss(y, logits, margin=1, squared=False)
 logits = tf.nn.softmax(logits)
-print("softmax logits:",logits)
-predict = tf.argmax(logits,1)
-predict = tf.cast(predict,tf.int32)
-print("predict value:",predict.shape)
-accuracy = tf.reduce_mean(tf.cast(tf.equal(predict,y),tf.float32))
+print("softmax logits:", logits)
+predict = tf.argmax(logits, 1)
+predict = tf.cast(predict, tf.int32)
+print("predict value:", predict.shape)
+accuracy = tf.reduce_mean(tf.cast(tf.equal(predict, y), tf.float32))
 
 optimizer = tf.train.AdamOptimizer(1e-3)
 global_step = tf.train.get_global_step()
 train_op = optimizer.minimize(loss, global_step=global_step)
 train_op2 = optimizer.minimize(loss_triplet, global_step=global_step)
-#tf.summary.scalar('LOSS', loss)
-tf.summary.tensor_summary('LOSS',loss)
+# tf.summary.scalar('LOSS', loss)
+tf.summary.tensor_summary('LOSS', loss)
 merged = tf.summary.merge_all()
 
 sess = tf.Session()
@@ -82,38 +82,36 @@ trainsize = len(x_train)
 batch_size = 440
 epochs = 10000
 
-
 train_data = (x_train, y_train)
+per_epoch_dataset = tf.data.Dataset.from_tensor_slices(train_data)
+
+
+def shuffle_after_each_epoch(epoch):
+    # Set `epoch_buffer_size` to 1 (i.e. no shuffling) in the 0th epoch,
+    # and `BUFFER_SIZE` thereafter.
+    return per_epoch_dataset.shuffle(trainsize).batch(batch_size)
+
+
+dataset = tf.data.Dataset.range(epochs).flat_map(shuffle_after_each_epoch)
+#sess.graph.finalize()
 
 for i in range(epochs):
-    #print("epoch:{}".format(i))
+    # print("epoch:{}".format(i))
     if i % 1000 == 0:
         print("epoch:{}".format(i))
-        dataset = tf.data.Dataset.from_tensor_slices(train_data)
-        dataset = dataset.shuffle(buffer_size=trainsize)  # whole dataset into the buffer
-        dataset = dataset.batch(44)
-        dataset = dataset.prefetch(1)  # make sure you always have one batch ready to serve
-
-        input_x, input_y = dataset.make_one_shot_iterator().get_next()
-
-    t_x, t_y = sess.run([input_x, input_y])
-    _, loss_cost = sess.run([train_op,merged], feed_dict={x: t_x, y: t_y})
-    train_writer.add_summary(loss_cost, i)
+    input_x, input_y = dataset.make_one_shot_iterator().get_next()
+t_x, t_y = sess.run([input_x, input_y])
+_, loss_cost = sess.run([train_op, merged], feed_dict={x: t_x, y: t_y})
+train_writer.add_summary(loss_cost, i)
 
 for i in range(epochs):
-	if i % 1000 == 0:
-		print("epoch:{}".format(i))
-		dataset = tf.data.Dataset.from_tensor_slices(train_data)
-		dataset = dataset.shuffle(buffer_size=trainsize)  # whole dataset into the buffer
-		dataset = dataset.batch(44)
-		dataset = dataset.prefetch(1)  # make sure you always have one batch ready to serve
-
-		input_x, input_y = dataset.make_one_shot_iterator().get_next()
-
-	t_x, t_y = sess.run([input_x, input_y])
-	_ = sess.run(train_op2,feed_dict={x:t_x,y:t_y})
+    if i % 1000 == 0:
+        print("epoch:{}".format(i))
+    input_x, input_y = dataset.make_one_shot_iterator().get_next()
+    t_x, t_y = sess.run([input_x, input_y])
+    _ = sess.run(train_op2, feed_dict={x: t_x, y: t_y})
 print("Train OVER!!!!!!!!!!")
 
 print("Start Eval!!!!!!!!!")
-acc = sess.run(accuracy,feed_dict={x:x_test,y:y_test})
-print("acc is:",acc)
+acc = sess.run(accuracy, feed_dict={x: x_test, y: y_test})
+print("acc is:", acc)
