@@ -87,11 +87,11 @@ train_data = (x_train, y_train)
 
 for i in range(epochs):
     #print("epoch:{}".format(i))
-    if i % 100 == 0:
+    if i % 1000 == 0:
         print("epoch:{}".format(i))
         dataset = tf.data.Dataset.from_tensor_slices(train_data)
         dataset = dataset.shuffle(buffer_size=trainsize)  # whole dataset into the buffer
-        dataset = dataset.batch(440)
+        dataset = dataset.batch(44)
         dataset = dataset.prefetch(1)  # make sure you always have one batch ready to serve
 
         input_x, input_y = dataset.make_one_shot_iterator().get_next()
@@ -101,11 +101,11 @@ for i in range(epochs):
     train_writer.add_summary(loss_cost, i)
 
 for i in range(epochs):
-	if i % 100 == 0:
+	if i % 1000 == 0:
 		print("epoch:{}".format(i))
 		dataset = tf.data.Dataset.from_tensor_slices(train_data)
 		dataset = dataset.shuffle(buffer_size=trainsize)  # whole dataset into the buffer
-		dataset = dataset.batch(440)
+		dataset = dataset.batch(44)
 		dataset = dataset.prefetch(1)  # make sure you always have one batch ready to serve
 
 		input_x, input_y = dataset.make_one_shot_iterator().get_next()
