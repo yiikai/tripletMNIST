@@ -52,8 +52,8 @@ with tf.name_scope('Layer2'):
                              bias_initializer=tf.truncated_normal_initializer(stddev=0.01))
 
 print('logits is ', logits.shape)
-#loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y,logits=logits)
-loss = batch_hard_triplet_loss(y, logits, margin=1, squared=False)
+loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y,logits=logits)
+loss_triplet = batch_hard_triplet_loss(y, logits, margin=1, squared=False)
 logits = tf.nn.softmax(logits)
 print("softmax logits:",logits)
 predict = tf.argmax(logits,1)
@@ -64,6 +64,7 @@ accuracy = tf.reduce_mean(tf.cast(tf.equal(predict,y),tf.float32))
 optimizer = tf.train.AdamOptimizer(1e-3)
 global_step = tf.train.get_global_step()
 train_op = optimizer.minimize(loss, global_step=global_step)
+train_op2 = optimizer.minimize(loss_triplet, global_step=global_step)
 #tf.summary.scalar('LOSS', loss)
 tf.summary.tensor_summary('LOSS',loss)
 merged = tf.summary.merge_all()
@@ -98,6 +99,19 @@ for i in range(epochs):
     t_x, t_y = sess.run([input_x, input_y])
     _, loss_cost = sess.run([train_op,merged], feed_dict={x: t_x, y: t_y})
     train_writer.add_summary(loss_cost, i)
+
+for i in range(epochs):
+	if i % 100 == 0:
+		print("epoch:{}".format(i))
+		dataset = tf.data.Dataset.from_tensor_slices(train_data)
+		dataset = dataset.shuffle(buffer_size=trainsize)  # whole dataset into the buffer
+		dataset = dataset.batch(440)
+		dataset = dataset.prefetch(1)  # make sure you always have one batch ready to serve
+
+		input_x, input_y = dataset.make_one_shot_iterator().get_next()
+
+	t_x, t_y = sess.run([input_x, input_y])
+	_ = sess.run(train_op2,feed_dict={x:t_x,y:t_y})
 print("Train OVER!!!!!!!!!!")
 
 print("Start Eval!!!!!!!!!")
